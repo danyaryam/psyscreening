@@ -1,0 +1,174 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum UserRole {
+  user
+  admin
+}
+
+enum ScreeningStatus {
+  in_progress
+  completed
+}
+
+enum ChatSessionStatus {
+  active
+  completed
+}
+
+enum ChatSender {
+  system
+  user
+}
+
+enum QuestionInputType {
+  number
+  choice
+  slider
+  textarea
+}
+
+enum RiskLevel {
+  rendah
+  sedang
+  tinggi
+}
+
+model User {
+  id           String       @id @default(cuid())
+  name         String
+  email        String       @unique
+  passwordHash String
+  role         UserRole     @default(user)
+  createdAt    DateTime     @default(now())
+  updatedAt    DateTime     @updatedAt
+  profile      Profile?
+  screenings   Screening[]
+  chatSessions ChatSession[]
+  adminLogs    AdminLog[]
+}
+
+model Profile {
+  id               String   @id @default(cuid())
+  userId           String   @unique
+  phone            String?
+  occupation       String?
+  city             String?
+  birthDate        String?
+  gender           String?
+  bio              String?
+  emergencyContact String?
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
+  user             User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model Screening {
+  id                   String           @id @default(cuid())
+  userId               String
+  status               ScreeningStatus  @default(in_progress)
+  currentQuestionIndex Int              @default(0)
+  startedAt            DateTime         @default(now())
+  completedAt          DateTime?
+  createdAt            DateTime         @default(now())
+  updatedAt            DateTime         @updatedAt
+  user                 User             @relation(fields: [userId], references: [id], onDelete: Cascade)
+  answers              ScreeningAnswer[]
+  result               ScreeningResult?
+  chatSession          ChatSession?
+
+  @@index([userId, status])
+}
+
+model ScreeningAnswer {
+  id           String    @id @default(cuid())
+  screeningId  String
+  questionId   String
+  questionKey  String
+  value        Json
+  displayValue String
+  createdAt    DateTime  @default(now())
+  updatedAt    DateTime  @updatedAt
+  screening    Screening @relation(fields: [screeningId], references: [id], onDelete: Cascade)
+
+  @@unique([screeningId, questionId])
+  @@index([screeningId])
+}
+
+model ScreeningResult {
+  id              String    @id @default(cuid())
+  screeningId     String    @unique
+  riskLevel       RiskLevel
+  score           Int
+  modelUsed       String
+  insights        Json
+  recommendations Json
+  disclaimer      String
+  createdAt       DateTime  @default(now())
+  screening       Screening @relation(fields: [screeningId], references: [id], onDelete: Cascade)
+}
+
+model ChatSession {
+  id          String            @id @default(cuid())
+  userId      String
+  screeningId String            @unique
+  status      ChatSessionStatus @default(active)
+  startedAt   DateTime          @default(now())
+  completedAt DateTime?
+  createdAt   DateTime          @default(now())
+  updatedAt   DateTime          @updatedAt
+  user        User              @relation(fields: [userId], references: [id], onDelete: Cascade)
+  screening   Screening         @relation(fields: [screeningId], references: [id], onDelete: Cascade)
+  messages    ChatMessage[]
+
+  @@index([userId])
+}
+
+model ChatMessage {
+  id         String     @id @default(cuid())
+  sessionId  String
+  sender     ChatSender
+  content    String
+  createdAt  DateTime   @default(now())
+  chatSession ChatSession @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+
+  @@index([sessionId, createdAt])
+}
+
+model ScreeningQuestion {
+  id          String            @id
+  key         String            @unique
+  title       String
+  helperText  String?
+  inputType   QuestionInputType
+  placeholder String?
+  min         Float?
+  max         Float?
+  step        Float?
+  required    Boolean           @default(true)
+  order       Int
+  isActive    Boolean           @default(true)
+  options     Json?
+  createdAt   DateTime          @default(now())
+  updatedAt   DateTime          @updatedAt
+
+  @@index([order, isActive])
+}
+
+model AdminLog {
+  id          String   @id @default(cuid())
+  adminId     String
+  action      String
+  entity      String
+  description String
+  createdAt   DateTime @default(now())
+  admin       User     @relation(fields: [adminId], references: [id], onDelete: Cascade)
+
+  @@index([adminId, createdAt])
+}
