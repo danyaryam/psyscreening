@@ -1,0 +1,95 @@
+@import url("https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&family=Sora:wght@400;500;600;700;800&display=swap");
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  color-scheme: light;
+  --bg: 222 57% 98%;
+  --text: 221 39% 16%;
+  --muted: 215 28% 92%;
+  --surface: 0 0% 100%;
+  --card: 0 0% 100%;
+  --border: 215 25% 84%;
+  --brand: 221 83% 58%;
+  --brand-soft: 217 91% 95%;
+  --brand-deep: 222 71% 34%;
+  --accent: 261 64% 68%;
+  --accent-soft: 260 60% 95%;
+  --success: 148 54% 42%;
+  --warning: 40 92% 53%;
+  --danger: 0 78% 62%;
+}
+
+.dark {
+  color-scheme: dark;
+  --bg: 225 33% 10%;
+  --text: 213 31% 91%;
+  --muted: 225 24% 18%;
+  --surface: 225 26% 14%;
+  --card: 225 26% 16%;
+  --border: 225 17% 26%;
+  --brand: 215 91% 64%;
+  --brand-soft: 222 44% 19%;
+  --brand-deep: 217 91% 75%;
+  --accent: 263 80% 72%;
+  --accent-soft: 263 27% 19%;
+  --success: 145 63% 44%;
+  --warning: 43 96% 56%;
+  --danger: 0 70% 60%;
+}
+
+@layer base {
+  * {
+    @apply border-border;
+  }
+
+  html {
+    scroll-behavior: smooth;
+  }
+
+  body {
+    @apply min-h-screen bg-background font-sans text-foreground antialiased;
+    background-image: radial-gradient(
+        circle at top,
+        rgba(59, 130, 246, 0.12),
+        transparent 28%
+      ),
+      linear-gradient(to bottom, rgba(255, 255, 255, 0.4), transparent 40%);
+  }
+
+  .dark body {
+    background-image: radial-gradient(
+        circle at top,
+        rgba(59, 130, 246, 0.14),
+        transparent 24%
+      ),
+      linear-gradient(to bottom, rgba(15, 23, 42, 0.55), transparent 38%);
+  }
+
+  h1,
+  h2,
+  h3,
+  h4 {
+    @apply font-display;
+  }
+}
+
+@layer components {
+  .container-shell {
+    @apply mx-auto w-full max-w-7xl px-4 sm:px-6 lg:px-8;
+  }
+
+  .panel {
+    @apply rounded-[28px] border border-white/60 bg-white/80 shadow-soft backdrop-blur dark:border-white/10 dark:bg-surface/80;
+  }
+
+  .glass {
+    @apply rounded-[28px] border border-white/40 bg-white/65 shadow-soft backdrop-blur-xl dark:border-white/10 dark:bg-white/5;
+  }
+
+  .subtle-ring {
+    @apply ring-1 ring-slate-200/70 dark:ring-white/10;
+  }
+}

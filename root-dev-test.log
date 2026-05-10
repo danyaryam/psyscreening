@@ -1,0 +1,40 @@
+
+> psyscreening@1.0.0 predev
+> npm run stop:dev
+
+
+> psyscreening@1.0.0 stop:dev
+> powershell -ExecutionPolicy Bypass -File ./scripts/stop-psyscreening-dev.ps1
+
+Tidak ada proses dev PsyScreening yang aktif.
+
+> psyscreening@1.0.0 dev
+> concurrently "npm run dev:backend" "npm run dev:frontend"
+
+[0] 
+[0] > psyscreening@1.0.0 dev:backend
+[0] > npm --prefix backend run dev
+[0] 
+[1] 
+[1] > psyscreening@1.0.0 dev:frontend
+[1] > npm --prefix frontend run dev
+[1] 
+[0] 
+[0] > psyscreening-backend@1.0.0 dev
+[0] > nodemon src/server.js
+[0] 
+[1] 
+[1] > psyscreening-frontend@1.0.0 dev
+[1] > vite
+[1] 
+[0] [33m[nodemon] 3.1.14[39m
+[0] [33m[nodemon] to restart at any time, enter `rs`[39m
+[0] [33m[nodemon] watching path(s): *.*[39m
+[0] [33m[nodemon] watching extensions: js,mjs,cjs,json[39m
+[0] [32m[nodemon] starting `node src/server.js`[39m
+[1] 
+[1]   [32m[1mVITE[22m v5.4.21[39m  [2mready in [0m[1m316[22m[2m[0m ms[22m
+[1] 
+[1]   [32m➜[39m  [1mLocal[22m:   [36mhttp://localhost:[1m5173[22m/[39m
+[1] [2m  [32m➜[39m  [1mNetwork[22m[2m: use [22m[1m--host[22m[2m to expose[22m
+[0] PsyScreening API berjalan di http://localhost:5000
