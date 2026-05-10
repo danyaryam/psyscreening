@@ -28,6 +28,8 @@ Salin `.env.example` menjadi `.env` lalu sesuaikan:
 cp .env.example .env
 ```
 
+> Pastikan backend sudah berjalan di `http://localhost:5000` sebelum memulai frontend. Jika backend belum aktif, request API akan gagal dengan `404` atau `network error`.
+
 - `VITE_API_BASE_URL`: base URL backend Express
 - `VITE_USE_MOCK_API`: `false` untuk backend asli, `true` jika ingin fallback ke mock mode
 

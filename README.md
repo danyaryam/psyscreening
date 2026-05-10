@@ -61,15 +61,18 @@ Setelah database di-seed:
 - User: `dina@psyscreening.id` / `User123!`
 - User lain: `arya@psyscreening.id` / `User123!`
 
-## Menjalankan PostgreSQL
+## Menjalankan Database
 
-Pilihan termudah adalah Docker:
+Untuk development, project ini menggunakan **SQLite** sebagai database default (file `backend/dev.db`).
 
-```bash
-docker compose up -d
-```
+Tidak perlu setup database eksternal - SQLite akan dibuat otomatis saat migrate.
 
-Ini akan menyalakan PostgreSQL di `localhost:5432` dengan database `psyscreening`.
+Jika ingin menggunakan PostgreSQL:
+1. Install PostgreSQL lokal atau gunakan Docker
+2. Ubah `backend/prisma/schema.prisma` provider dari `sqlite` ke `postgresql`
+3. Update `DATABASE_URL` di `backend/.env`
+4. Hapus `prisma/migrations` dan jalankan `npm run db:migrate` lagi
+
 
 ## Setup Backend
 
@@ -97,7 +100,11 @@ npm run dev
 Backend akan berjalan di:
 
 - [http://localhost:5000](http://localhost:5000)
-- health check: [http://localhost:5000/api/health](http://localhost:5000/api/health)
+
+
+!! - health check: [http://localhost:5000/api/health](http://localhost:5000/api/health)
+Check API Connection
+
 
 ## Setup Frontend
 
@@ -212,3 +219,35 @@ Yang belum saya jalankan penuh di workspace ini:
 - server + database end-to-end live
 
 Dua langkah itu masih memerlukan PostgreSQL aktif dan `DATABASE_URL` yang valid di `backend/.env`.
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+!! * Start setup * !!
+
+npm install
+npm run setup
+npm run db:migrate
+npm run db:seed
+npm run dev
