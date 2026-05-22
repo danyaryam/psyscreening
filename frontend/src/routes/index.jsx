@@ -10,6 +10,7 @@ import { LoginPage } from "@/pages/auth/LoginPage";
 import { RegisterPage } from "@/pages/auth/RegisterPage";
 import { NotFoundPage } from "@/pages/NotFoundPage";
 import { LandingPage } from "@/pages/public/LandingPage";
+import { VerifyEmailPage } from "@/pages/VerifyEmailPage";
 import { DashboardPage } from "@/pages/user/DashboardPage";
 import { HistoryPage } from "@/pages/user/HistoryPage";
 import { ProfilePage } from "@/pages/user/ProfilePage";
@@ -28,6 +29,7 @@ export default function AppRoutes() {
       <Route element={<AuthLayout />}>
         <Route path="/login" element={<LoginPage />} />
         <Route path="/register" element={<RegisterPage />} />
+        <Route path="/verify-email" element={<VerifyEmailPage />} />
       </Route>
 
       <Route element={<ProtectedRoute />}>

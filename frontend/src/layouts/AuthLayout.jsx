@@ -6,8 +6,9 @@ import { useAuth } from "@/hooks/useAuth";
 export function AuthLayout() {
   const { user } = useAuth();
   const location = useLocation();
+  const isVerifyEmailPage = location.pathname === "/verify-email";
 
-  if (user) {
+  if (user && !isVerifyEmailPage) {
     return (
       <Navigate
         to={user.role === "admin" ? "/admin/dashboard" : "/app/dashboard"}

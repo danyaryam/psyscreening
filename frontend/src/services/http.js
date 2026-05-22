@@ -3,6 +3,48 @@ import { env } from "@/config/env";
 
 const TOKEN_STORAGE_KEY = "psyscreening_access_token";
 export const UNAUTHORIZED_EVENT = "psyscreening:unauthorized";
+let memoryToken = null;
+
+function getBrowserStorage(storageName) {
+  try {
+    return window?.[storageName] ?? null;
+  } catch {
+    return null;
+  }
+}
+
+function readFromStorage(storage) {
+  try {
+    return storage?.getItem(TOKEN_STORAGE_KEY) ?? null;
+  } catch {
+    return null;
+  }
+}
+
+function writeToStorage(storage, token) {
+  if (!storage) {
+    return false;
+  }
+
+  try {
+    storage.setItem(TOKEN_STORAGE_KEY, token);
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+function removeFromStorage(storage) {
+  if (!storage) {
+    return;
+  }
+
+  try {
+    storage.removeItem(TOKEN_STORAGE_KEY);
+  } catch {
+    // Storage can be unavailable in restricted browser contexts.
+  }
+}
 
 export const http = axios.create({
   baseURL: env.apiBaseUrl,
@@ -13,7 +55,7 @@ export const http = axios.create({
 });
 
 http.interceptors.request.use((config) => {
-  const token = window.localStorage.getItem(TOKEN_STORAGE_KEY);
+  const token = getStoredToken();
 
   if (token) {
     config.headers.Authorization = `Bearer ${token}`;
@@ -33,7 +75,11 @@ http.interceptors.response.use(
       "Terjadi kesalahan pada request.";
 
     const isAuthFormRequest =
-      requestUrl.includes("/auth/login") || requestUrl.includes("/auth/register");
+      requestUrl.includes("/auth/login") ||
+      requestUrl.includes("/auth/register") ||
+      requestUrl.includes("/auth/google") ||
+      requestUrl.includes("/auth/verify-email") ||
+      requestUrl.includes("/auth/resend-verification");
 
     if (status === 401 && getStoredToken() && !isAuthFormRequest) {
       clearStoredToken();
@@ -45,13 +91,29 @@ http.interceptors.response.use(
 );
 
 export function getStoredToken() {
-  return window.localStorage.getItem(TOKEN_STORAGE_KEY);
+  return (
+    readFromStorage(getBrowserStorage("localStorage")) ??
+    readFromStorage(getBrowserStorage("sessionStorage")) ??
+    memoryToken
+  );
 }
 
 export function setStoredToken(token) {
-  window.localStorage.setItem(TOKEN_STORAGE_KEY, token);
+  memoryToken = token;
+
+  if (writeToStorage(getBrowserStorage("localStorage"), token)) {
+    return "localStorage";
+  }
+
+  if (writeToStorage(getBrowserStorage("sessionStorage"), token)) {
+    return "sessionStorage";
+  }
+
+  return "memory";
 }
 
 export function clearStoredToken() {
-  window.localStorage.removeItem(TOKEN_STORAGE_KEY);
+  memoryToken = null;
+  removeFromStorage(getBrowserStorage("localStorage"));
+  removeFromStorage(getBrowserStorage("sessionStorage"));
 }

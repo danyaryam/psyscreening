@@ -25,6 +25,8 @@ export async function authMiddleware(req, res, next) {
       role: user.role,
       email: user.email,
       name: user.name,
+      emailVerified: user.emailVerified,
+      authProvider: user.authProvider,
     };
 
     next();

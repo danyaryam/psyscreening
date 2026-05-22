@@ -1,14 +1,13 @@
-import { createContext, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import toast from "react-hot-toast";
 import { authService } from "@/services/authService";
+import { AuthContext } from "./AuthContextObject";
 import {
   clearStoredToken,
   getStoredToken,
   setStoredToken,
   UNAUTHORIZED_EVENT,
 } from "@/services/http";
-
-export const AuthContext = createContext(null);
 
 export function AuthProvider({ children }) {
   const [user, setUser] = useState(null);
@@ -60,6 +59,10 @@ export function AuthProvider({ children }) {
     };
   }, []);
 
+  const updateSessionUser = useCallback((nextUser) => {
+    setUser(nextUser);
+  }, []);
+
   const value = useMemo(
     () => ({
       user,
@@ -74,9 +77,17 @@ export function AuthProvider({ children }) {
       },
       async register(payload) {
         const response = await authService.register(payload);
+        toast.success(
+          response.message ||
+            "Registrasi berhasil. Silakan cek email Anda untuk verifikasi.",
+        );
+        return response;
+      },
+      async loginWithGoogle(credential) {
+        const response = await authService.googleAuth(credential);
         setStoredToken(response.token);
         setUser(response.user);
-        toast.success("Akun berhasil dibuat.");
+        toast.success("Login Google berhasil.");
         return response.user;
       },
       logout() {
@@ -84,11 +95,9 @@ export function AuthProvider({ children }) {
         setUser(null);
         toast.success("Anda telah logout.");
       },
-      updateSessionUser(nextUser) {
-        setUser(nextUser);
-      },
+      updateSessionUser,
     }),
-    [loading, user],
+    [loading, updateSessionUser, user],
   );
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;

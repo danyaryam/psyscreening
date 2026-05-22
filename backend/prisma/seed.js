@@ -1,350 +1,178 @@
 import "dotenv/config";
 import bcrypt from "bcryptjs";
 import { PrismaClient } from "@prisma/client";
-import {
-  MEDICAL_DISCLAIMER,
-  SCREENING_QUESTION_SEED,
-} from "../src/utils/constants.js";
+import { SCREENING_QUESTION_SEED } from "../src/utils/constants.js";
 
 const prisma = new PrismaClient();
 
-function nowOffset(daysAgo = 0, hoursAgo = 0) {
-  const date = new Date();
-  date.setDate(date.getDate() - daysAgo);
-  date.setHours(date.getHours() - hoursAgo);
-  return date;
-}
+const DEFAULT_ADMIN_EMAIL = "adminganteng@gmail.com";
+const DEFAULT_ADMIN_PASSWORD = "Adminganjil13579";
+const normalizeEmail = (email) => email.trim().toLowerCase();
 
-async function main() {
-  await prisma.chatMessage.deleteMany();
-  await prisma.chatSession.deleteMany();
-  await prisma.screeningResult.deleteMany();
-  await prisma.screeningAnswer.deleteMany();
-  await prisma.screening.deleteMany();
-  await prisma.adminLog.deleteMany();
-  await prisma.profile.deleteMany();
-  await prisma.screeningQuestion.deleteMany();
-  await prisma.user.deleteMany();
+const getAdminCredentials = () => {
+  const email = normalizeEmail(process.env.ADMIN_EMAIL || DEFAULT_ADMIN_EMAIL);
+  const password = process.env.ADMIN_PASSWORD || DEFAULT_ADMIN_PASSWORD;
 
-  const adminPasswordHash = await bcrypt.hash("Admin123!", 10);
-  const userPasswordHash = await bcrypt.hash("User123!", 10);
+  if (!password.trim()) {
+    throw new Error("ADMIN_PASSWORD tidak boleh kosong.");
+  }
 
-  await prisma.user.create({
-    data: {
-      id: "user_admin_1",
-      name: "Ayu Admin",
-      email: "admin@psyscreening.id",
-      passwordHash: adminPasswordHash,
+  return { email, password };
+};
+
+const upsertAdmin = async () => {
+  const { email, password } = getAdminCredentials();
+  const passwordHash = await bcrypt.hash(password, 10);
+
+  return prisma.user.upsert({
+    where: { email },
+    update: {
+      name: "Admin PsyScreening",
+      passwordHash,
       role: "admin",
-      createdAt: nowOffset(30),
-      updatedAt: new Date(),
+      emailVerified: true,
+      emailVerificationToken: null,
+      emailVerificationExpires: null,
+      googleId: null,
+      authProvider: "local",
+      avatar: null,
+      profile: {
+        upsert: {
+          update: {
+            occupation: "Administrator PsyScreening",
+            city: "Indonesia",
+            bio: "Akun admin utama untuk mengelola platform PsyScreening.",
+          },
+          create: {
+            occupation: "Administrator PsyScreening",
+            city: "Indonesia",
+            bio: "Akun admin utama untuk mengelola platform PsyScreening.",
+          },
+        },
+      },
+    },
+    create: {
+      name: "Admin PsyScreening",
+      email,
+      passwordHash,
+      role: "admin",
+      emailVerified: true,
+      authProvider: "local",
       profile: {
         create: {
-          id: "profile_admin_1",
-          phone: "081200000001",
-          occupation: "System Administrator",
-          city: "Jakarta",
-          birthDate: "1995-03-12",
-          gender: "Perempuan",
-          bio: "Mengelola operasional platform screening dan data admin.",
-          emergencyContact: "Tim Ops - 081122223333",
+          occupation: "Administrator PsyScreening",
+          city: "Indonesia",
+          bio: "Akun admin utama untuk mengelola platform PsyScreening.",
         },
+      },
+    },
+  });
+};
+
+const cleanDevelopmentRuntimeData = async (adminEmail) => {
+  if (process.env.NODE_ENV === "production") {
+    return {
+      users: 0,
+      screenings: 0,
+      chatSessions: 0,
+      chatMessages: 0,
+      answers: 0,
+      results: 0,
+      logs: 0,
+    };
+  }
+
+  const chatMessages = await prisma.chatMessage.deleteMany();
+  const chatSessions = await prisma.chatSession.deleteMany();
+  const results = await prisma.screeningResult.deleteMany();
+  const answers = await prisma.screeningAnswer.deleteMany();
+  const screenings = await prisma.screening.deleteMany();
+  const logs = await prisma.adminLog.deleteMany();
+  const users = await prisma.user.deleteMany({
+    where: {
+      email: {
+        not: adminEmail,
       },
     },
   });
 
-  await prisma.user.create({
-    data: {
-      id: "user_dina_1",
-      name: "Dina Maheswari",
-      email: "dina@psyscreening.id",
-      passwordHash: userPasswordHash,
-      role: "user",
-      createdAt: nowOffset(18),
-      updatedAt: new Date(),
-      profile: {
-        create: {
-          id: "profile_user_1",
-          phone: "081300000002",
-          occupation: "Mahasiswa",
-          city: "Bandung",
-          birthDate: "2002-06-21",
-          gender: "Perempuan",
-          bio: "Sedang mencoba menjaga pola tidur dan aktivitas harian tetap stabil.",
-          emergencyContact: "Ibu - 081344445555",
-        },
-      },
-    },
-  });
+  return {
+    users: users.count,
+    screenings: screenings.count,
+    chatSessions: chatSessions.count,
+    chatMessages: chatMessages.count,
+    answers: answers.count,
+    results: results.count,
+    logs: logs.count,
+  };
+};
 
-  await prisma.user.create({
-    data: {
-      id: "user_arya_1",
-      name: "Arya Rahman",
-      email: "arya@psyscreening.id",
-      passwordHash: userPasswordHash,
-      role: "user",
-      createdAt: nowOffset(11),
-      updatedAt: new Date(),
-      profile: {
-        create: {
-          id: "profile_user_2",
-          phone: "081300000003",
-          occupation: "UI Designer",
-          city: "Yogyakarta",
-          birthDate: "1999-01-09",
-          gender: "Laki-laki",
-          bio: "Aktif mengikuti program wellness perusahaan.",
-          emergencyContact: "Kakak - 081366667777",
-        },
-      },
-    },
-  });
+const upsertScreeningQuestions = async () => {
+  let count = 0;
 
   for (const question of SCREENING_QUESTION_SEED) {
-    await prisma.screeningQuestion.create({
-      data: {
-        ...question,
+    await prisma.screeningQuestion.upsert({
+      where: { key: question.key },
+      update: {
+        title: question.title,
+        helperText: question.helperText ?? null,
+        inputType: question.inputType,
+        placeholder: question.placeholder ?? null,
+        min: question.min ?? null,
+        max: question.max ?? null,
+        step: question.step ?? null,
+        required: question.required ?? true,
+        order: question.order,
+        isActive: question.isActive ?? true,
+        options: question.options ?? null,
+      },
+      create: {
+        id: question.id,
+        key: question.key,
+        title: question.title,
+        helperText: question.helperText ?? null,
+        inputType: question.inputType,
+        placeholder: question.placeholder ?? null,
+        min: question.min ?? null,
+        max: question.max ?? null,
+        step: question.step ?? null,
+        required: question.required ?? true,
+        order: question.order,
+        isActive: question.isActive ?? true,
         options: question.options ?? null,
       },
     });
+
+    count += 1;
   }
 
-  await prisma.screening.create({
-    data: {
-      id: "screening_seed_1",
-      userId: "user_dina_1",
-      status: "completed",
-      currentQuestionIndex: SCREENING_QUESTION_SEED.length,
-      startedAt: nowOffset(2, 4),
-      completedAt: nowOffset(2, 3),
-      chatSession: {
-        create: {
-          id: "session_seed_1",
-          userId: "user_dina_1",
-          status: "completed",
-          startedAt: nowOffset(2, 4),
-          completedAt: nowOffset(2, 3),
-          messages: {
-            create: [
-              {
-                id: "msg_seed_1",
-                sender: "system",
-                content:
-                  "Halo Dina, saya akan memandu screening singkat untuk memahami pola tidur, stres, aktivitas, dan suasana hati Anda.",
-                createdAt: nowOffset(2, 4),
-              },
-              {
-                id: "msg_seed_2",
-                sender: "system",
-                content:
-                  "Jawab sejujur mungkin ya. Hasil ini hanya untuk screening awal, bukan diagnosis profesional.",
-                createdAt: nowOffset(2, 4),
-              },
-            ],
-          },
-        },
-      },
-      answers: {
-        create: [
-          {
-            id: "ans_seed_1",
-            questionId: "q_sleep_hours",
-            questionKey: "sleepHours",
-            value: 6,
-            displayValue: "6 jam",
-            createdAt: nowOffset(2, 3),
-          },
-          {
-            id: "ans_seed_2",
-            questionId: "q_sleep_quality",
-            questionKey: "sleepQuality",
-            value: "cukup",
-            displayValue: "Kadang terganggu",
-            createdAt: nowOffset(2, 3),
-          },
-          {
-            id: "ans_seed_3",
-            questionId: "q_stress_level",
-            questionKey: "stressLevel",
-            value: 7,
-            displayValue: "7/10",
-            createdAt: nowOffset(2, 3),
-          },
-          {
-            id: "ans_seed_4",
-            questionId: "q_daily_activity",
-            questionKey: "activityLevel",
-            value: "sedang",
-            displayValue: "Cukup aktif tetapi naik turun",
-            createdAt: nowOffset(2, 3),
-          },
-          {
-            id: "ans_seed_5",
-            questionId: "q_mood",
-            questionKey: "moodState",
-            value: "berfluktuasi",
-            displayValue: "Kadang mudah lelah / cemas",
-            createdAt: nowOffset(2, 3),
-          },
-          {
-            id: "ans_seed_6",
-            questionId: "q_social_support",
-            questionKey: "socialSupport",
-            value: "cukup",
-            displayValue: "Ada dukungan, tetapi terbatas",
-            createdAt: nowOffset(2, 3),
-          },
-        ],
-      },
-      result: {
-        create: {
-          id: "result_seed_1",
-          riskLevel: "sedang",
-          score: 68,
-          modelUsed: "Random Forest",
-          insights: [
-            "Pola tidur kurang stabil dan berada di bawah target ideal.",
-            "Tingkat stres harian cenderung tinggi dalam beberapa hari terakhir.",
-            "Aktivitas harian terlihat cukup aktif tetapi belum konsisten.",
-          ],
-          recommendations: [
-            "Coba konsisten tidur dan bangun pada jam yang sama selama beberapa hari.",
-            "Sisihkan jeda singkat untuk recovery mental ketika beban meningkat.",
-            "Pertimbangkan berbicara dengan orang tepercaya bila stres mulai terasa berat.",
-          ],
-          disclaimer: MEDICAL_DISCLAIMER,
-          createdAt: nowOffset(2, 3),
-        },
-      },
-    },
-  });
+  return count;
+};
 
-  await prisma.screening.create({
-    data: {
-      id: "screening_seed_2",
-      userId: "user_arya_1",
-      status: "completed",
-      currentQuestionIndex: SCREENING_QUESTION_SEED.length,
-      startedAt: nowOffset(5, 7),
-      completedAt: nowOffset(5, 6),
-      chatSession: {
-        create: {
-          id: "session_seed_2",
-          userId: "user_arya_1",
-          status: "completed",
-          startedAt: nowOffset(5, 7),
-          completedAt: nowOffset(5, 6),
-          messages: {
-            create: [
-              {
-                id: "msg_seed_3",
-                sender: "system",
-                content:
-                  "Halo Arya, mari kita lakukan screening awal dengan beberapa pertanyaan terarah.",
-                createdAt: nowOffset(5, 7),
-              },
-            ],
-          },
-        },
-      },
-      answers: {
-        create: [
-          {
-            id: "ans_seed_7",
-            questionId: "q_sleep_hours",
-            questionKey: "sleepHours",
-            value: 4.5,
-            displayValue: "4.5 jam",
-            createdAt: nowOffset(5, 6),
-          },
-          {
-            id: "ans_seed_8",
-            questionId: "q_sleep_quality",
-            questionKey: "sleepQuality",
-            value: "buruk",
-            displayValue: "Sering terbangun / tidak nyenyak",
-            createdAt: nowOffset(5, 6),
-          },
-          {
-            id: "ans_seed_9",
-            questionId: "q_stress_level",
-            questionKey: "stressLevel",
-            value: 9,
-            displayValue: "9/10",
-            createdAt: nowOffset(5, 6),
-          },
-          {
-            id: "ans_seed_10",
-            questionId: "q_daily_activity",
-            questionKey: "activityLevel",
-            value: "rendah",
-            displayValue: "Cenderung menurun / sulit konsisten",
-            createdAt: nowOffset(5, 6),
-          },
-          {
-            id: "ans_seed_11",
-            questionId: "q_mood",
-            questionKey: "moodState",
-            value: "menurun",
-            displayValue: "Sering sedih, kosong, atau tertekan",
-            createdAt: nowOffset(5, 6),
-          },
-          {
-            id: "ans_seed_12",
-            questionId: "q_social_support",
-            questionKey: "socialSupport",
-            value: "rendah",
-            displayValue: "Saya merasa cukup sendirian",
-            createdAt: nowOffset(5, 6),
-          },
-        ],
-      },
-      result: {
-        create: {
-          id: "result_seed_2",
-          riskLevel: "tinggi",
-          score: 84,
-          modelUsed: "Decision Tree",
-          insights: [
-            "Jam tidur jauh dari pola ideal dan kualitas tidur kurang baik.",
-            "Stres tinggi disertai penurunan aktivitas dan dukungan sosial yang rendah.",
-            "Suasana hati menunjukkan indikasi penurunan yang perlu diperhatikan lebih lanjut.",
-          ],
-          recommendations: [
-            "Prioritaskan istirahat dan kurangi aktivitas yang memperburuk kelelahan.",
-            "Segera cari dukungan dari orang tepercaya, counselor, atau profesional kesehatan mental.",
-            "Buat langkah harian yang sederhana dan realistis untuk memulihkan rutinitas.",
-          ],
-          disclaimer: MEDICAL_DISCLAIMER,
-          createdAt: nowOffset(5, 6),
-        },
-      },
-    },
-  });
+async function main() {
+  const { email: adminEmail } = getAdminCredentials();
+  const cleanup = await cleanDevelopmentRuntimeData(adminEmail);
+  const admin = await upsertAdmin();
+  const questionCount = await upsertScreeningQuestions();
 
-  await prisma.adminLog.createMany({
-    data: [
-      {
-        id: "log_seed_1",
-        adminId: "user_admin_1",
-        action: "LOGIN",
-        entity: "auth",
-        description: "Admin login ke dashboard monitoring.",
-        createdAt: nowOffset(0, 2),
-      },
-      {
-        id: "log_seed_2",
-        adminId: "user_admin_1",
-        action: "VIEW_STATS",
-        entity: "screenings",
-        description: "Admin membuka statistik hasil screening.",
-        createdAt: nowOffset(0, 1),
-      },
-    ],
-  });
+  const [totalUsers, totalScreenings, totalChatSessions, totalResults] =
+    await Promise.all([
+      prisma.user.count(),
+      prisma.screening.count(),
+      prisma.chatSession.count(),
+      prisma.screeningResult.count(),
+    ]);
 
-  console.log("Database PsyScreening berhasil di-seed.");
+  console.log("Seed PsyScreening selesai.");
+  console.log(`Admin utama: ${admin.email}`);
+  console.log(`Pertanyaan screening aktif/default dipastikan: ${questionCount}`);
+  console.log(
+    `Data development dibersihkan: ${cleanup.users} user, ${cleanup.screenings} screening, ${cleanup.chatSessions} chat session, ${cleanup.chatMessages} chat message, ${cleanup.answers} answer, ${cleanup.results} result, ${cleanup.logs} admin log.`,
+  );
+  console.log(
+    `Ringkasan database: ${totalUsers} user, ${totalScreenings} screening, ${totalChatSessions} chat session, ${totalResults} result.`,
+  );
+  console.log("Seed ini tidak membuat user dummy, chat dummy, atau hasil dummy.");
 }
 
 main()

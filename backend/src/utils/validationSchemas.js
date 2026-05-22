@@ -15,6 +15,18 @@ export const loginSchema = z.object({
   password: z.string().min(6, "Password minimal 6 karakter."),
 });
 
+export const googleAuthSchema = z.object({
+  credential: z.string().min(20, "Credential Google tidak valid."),
+});
+
+export const verifyEmailQuerySchema = z.object({
+  token: z.string().min(20, "Token verifikasi tidak valid."),
+});
+
+export const resendVerificationSchema = z.object({
+  email: z.string().email("Format email tidak valid."),
+});
+
 export const updateProfileSchema = z.object({
   name: z.string().min(3, "Nama minimal 3 karakter."),
   phone: z.string().optional().or(z.literal("")),

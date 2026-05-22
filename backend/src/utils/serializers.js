@@ -14,6 +14,9 @@ export function serializeUser(user) {
     name: user.name,
     email: user.email,
     role: user.role,
+    emailVerified: Boolean(user.emailVerified),
+    authProvider: user.authProvider ?? "local",
+    avatar: user.avatar ?? null,
     createdAt: toIso(user.createdAt),
     updatedAt: toIso(user.updatedAt),
   };

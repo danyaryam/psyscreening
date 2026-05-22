@@ -21,6 +21,36 @@ export const authService = {
     return data;
   },
 
+  async googleAuth(credential) {
+    if (env.useMockApi) {
+      throw new Error("Google OAuth tersedia saat frontend terhubung ke API asli.");
+    }
+
+    const { data } = await http.post("/auth/google", { credential });
+    return data;
+  },
+
+  async verifyEmail(token) {
+    if (env.useMockApi) {
+      return { message: "Email berhasil diverifikasi." };
+    }
+
+    const { data } = await http.get("/auth/verify-email", { params: { token } });
+    return data;
+  },
+
+  async resendVerification(email) {
+    if (env.useMockApi) {
+      return {
+        message:
+          "Jika email masih membutuhkan verifikasi, link verifikasi baru akan kami kirimkan.",
+      };
+    }
+
+    const { data } = await http.post("/auth/resend-verification", { email });
+    return data;
+  },
+
   async getMe(token) {
     if (env.useMockApi) {
       return mockApi.getCurrentUser(token);
